@@ -1,60 +1,62 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../data/models/expense_model.dart';
-import '../../providers/expense_provider.dart';
+import '../../../data/models/income_model.dart';
+import '../../providers/income_provider.dart';
 import '../../providers/providers.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/date_utils.dart' as app_date_utils;
 
-/// Screen for adding or editing an expense
-class AddExpenseScreen extends ConsumerStatefulWidget {
-  final String? expenseId; // If null, we're adding. If not null, we're editing.
+/// Screen for adding or editing income
+class AddIncomeScreen extends ConsumerStatefulWidget {
+  final String? incomeId;
 
-  const AddExpenseScreen({super.key, this.expenseId});
+  const AddIncomeScreen({super.key, this.incomeId});
 
   @override
-  ConsumerState<AddExpenseScreen> createState() => _AddExpenseScreenState();
+  ConsumerState<AddIncomeScreen> createState() => _AddIncomeScreenState();
 }
 
-class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
+class _AddIncomeScreenState extends ConsumerState<AddIncomeScreen> {
   final _formKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
+  final _sourceController = TextEditingController();
   final _descriptionController = TextEditingController();
-  
+
   String? _selectedCategory;
   DateTime _selectedDate = DateTime.now();
   bool _isLoading = false;
-  ExpenseModel? _existingExpense;
+  IncomeModel? _existingIncome;
 
   @override
   void initState() {
     super.initState();
-    if (widget.expenseId != null) {
-      _loadExpense();
+    if (widget.incomeId != null) {
+      _loadIncome();
     }
   }
 
-  Future<void> _loadExpense() async {
+  Future<void> _loadIncome() async {
     setState(() => _isLoading = true);
     try {
-      final repository = ref.read(expenseRepositoryProvider);
-      final expense = await repository.getExpenseById(widget.expenseId!);
-      
-      if (expense != null && mounted) {
+      final repository = ref.read(incomeRepositoryProvider);
+      final income = await repository.getIncomeById(widget.incomeId!);
+
+      if (income != null && mounted) {
         setState(() {
-          _existingExpense = expense;
-          _amountController.text = expense.amount.toString();
-          _descriptionController.text = expense.description;
-          _selectedCategory = expense.category;
-          _selectedDate = expense.date;
+          _existingIncome = income;
+          _amountController.text = income.amount.toString();
+          _sourceController.text = income.source;
+          _descriptionController.text = income.description;
+          _selectedCategory = income.category;
+          _selectedDate = income.date;
         });
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading expense: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading income: $e')));
       }
     } finally {
       if (mounted) {
@@ -66,18 +68,17 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
   @override
   void dispose() {
     _amountController.dispose();
+    _sourceController.dispose();
     _descriptionController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final isEditing = widget.expenseId != null;
+    final isEditing = widget.incomeId != null;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(isEditing ? 'Edit Expense' : 'Add Expense'),
-      ),
+      appBar: AppBar(title: Text(isEditing ? 'Edit Income' : 'Add Income')),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
@@ -95,9 +96,13 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
                         prefixText: '৳ ',
                         hintText: '0.00',
                       ),
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       inputFormatters: [
-                        FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
+                        FilteringTextInputFormatter.allow(
+                          RegExp(r'^\d+\.?\d{0,2}'),
+                        ),
                       ],
                       validator: (value) {
                         if (value == null || value.isEmpty) {
@@ -118,12 +123,28 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
                     ),
                     const SizedBox(height: 16),
 
+                    // Source field
+                    TextFormField(
+                      controller: _sourceController,
+                      decoration: const InputDecoration(
+                        labelText: 'Source',
+                        hintText: 'e.g., January Salary, Freelance Project',
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Please enter a source';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
                     // Description field
                     TextFormField(
                       controller: _descriptionController,
                       decoration: const InputDecoration(
                         labelText: 'Description',
-                        hintText: 'What did you spend on?',
+                        hintText: 'Additional details',
                       ),
                       maxLength: AppConstants.maxDescriptionLength,
                       validator: (value) {
@@ -146,7 +167,7 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
                           value: null,
                           child: Text('None'),
                         ),
-                        ...AppConstants.expenseCategories.map((category) {
+                        ...AppConstants.incomeCategories.map((category) {
                           return DropdownMenuItem(
                             value: category,
                             child: Text(category),
@@ -178,7 +199,7 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
 
                     // Save button
                     ElevatedButton(
-                      onPressed: _isLoading ? null : _saveExpense,
+                      onPressed: _isLoading ? null : _saveIncome,
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
@@ -188,7 +209,7 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
                               width: 20,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : Text(isEditing ? 'Update Expense' : 'Add Expense'),
+                          : Text(isEditing ? 'Update Income' : 'Add Income'),
                     ),
                   ],
                 ),
@@ -212,7 +233,7 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
     }
   }
 
-  Future<void> _saveExpense() async {
+  Future<void> _saveIncome() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -221,49 +242,52 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
 
     try {
       final amount = double.parse(_amountController.text);
+      final source = _sourceController.text.trim();
       final description = _descriptionController.text.trim();
 
-      if (widget.expenseId != null) {
-        // Update existing expense
-        final updatedExpense = _existingExpense!.copyWith(
+      if (widget.incomeId != null) {
+        // Update existing income
+        final updatedIncome = _existingIncome!.copyWith(
           amount: amount,
+          source: source,
           description: description,
           category: _selectedCategory,
           date: _selectedDate,
           updatedAt: DateTime.now(),
         );
 
-        await ref.read(expenseProvider.notifier).updateExpense(updatedExpense);
-        
+        await ref.read(incomeProvider.notifier).updateIncome(updatedIncome);
+
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Expense updated')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Income updated')));
           Navigator.pop(context, true);
         }
       } else {
-        // Create new expense
-        final expense = ExpenseModel.create(
+        // Create new income
+        final income = IncomeModel.create(
           amount: amount,
+          source: source,
           description: description,
           category: _selectedCategory,
           date: _selectedDate,
         );
 
-        await ref.read(expenseProvider.notifier).addExpense(expense);
-        
+        await ref.read(incomeProvider.notifier).addIncome(income);
+
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Expense added')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Income added')));
           Navigator.pop(context, true);
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     } finally {
       if (mounted) {

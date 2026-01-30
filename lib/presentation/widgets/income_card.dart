@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
-import '../../data/models/expense_model.dart';
+import '../../data/models/income_model.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../../core/utils/date_utils.dart' as app_date_utils;
 import '../../core/theme/app_theme.dart';
 
-/// Card widget for displaying an expense in a list
-class ExpenseCard extends StatelessWidget {
-  final ExpenseModel expense;
+/// Card widget for displaying income in a list
+class IncomeCard extends StatelessWidget {
+  final IncomeModel income;
   final VoidCallback? onTap;
   final VoidCallback? onDelete;
 
-  const ExpenseCard({
+  const IncomeCard({
     super.key,
-    required this.expense,
+    required this.income,
     this.onTap,
     this.onDelete,
   });
@@ -28,29 +28,29 @@ class ExpenseCard extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              // Category icon
+              // Source icon
               Container(
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: AppTheme.expenseColor.withValues(alpha: 0.1),
+                  color: AppTheme.incomeColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
-                  _getCategoryIcon(expense.category),
-                  color: AppTheme.expenseColor,
+                  _getSourceIcon(income.source),
+                  color: AppTheme.incomeColor,
                   size: 24,
                 ),
               ),
               const SizedBox(width: 16),
-              
-              // Expense details
+
+              // Income details
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      expense.description,
+                      income.description,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
@@ -60,43 +60,48 @@ class ExpenseCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        if (expense.category != null) ...[
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.grey[200],
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              expense.category!,
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
                           ),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[200],
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            income.source,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ),
+                        if (income.category != null) ...[
                           const SizedBox(width: 8),
-                        ],
-                        Text(
-                          app_date_utils.DateUtils.formatRelative(expense.date),
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppTheme.textSecondary,
+                          Text(
+                            income.category!,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: AppTheme.textSecondary),
                           ),
+                        ],
+                        const SizedBox(width: 8),
+                        Text(
+                          app_date_utils.DateUtils.formatRelative(income.date),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: AppTheme.textSecondary),
                         ),
                       ],
                     ),
                   ],
                 ),
               ),
-              
+
               // Amount and delete button
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    CurrencyFormatter.format(expense.amount),
+                    CurrencyFormatter.format(income.amount),
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: AppTheme.expenseColor,
+                      color: AppTheme.incomeColor,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -117,32 +122,15 @@ class ExpenseCard extends StatelessWidget {
     );
   }
 
-  IconData _getCategoryIcon(String? category) {
-    if (category == null) return Icons.shopping_bag;
-    
-    switch (category.toLowerCase()) {
-      case 'food & dining':
-      case 'food':
-        return Icons.restaurant;
-      case 'transportation':
-      case 'transport':
-        return Icons.directions_car;
-      case 'shopping':
-        return Icons.shopping_cart;
-      case 'entertainment':
-        return Icons.movie;
-      case 'bills & utilities':
-      case 'bills':
-        return Icons.receipt;
-      case 'healthcare':
-      case 'health':
-        return Icons.medical_services;
-      case 'education':
-        return Icons.school;
-      case 'travel':
-        return Icons.flight;
-      default:
-        return Icons.shopping_bag;
-    }
+  IconData _getSourceIcon(String source) {
+    final lowerSource = source.toLowerCase();
+
+    if (lowerSource.contains('salary')) return Icons.work;
+    if (lowerSource.contains('freelance')) return Icons.laptop;
+    if (lowerSource.contains('business')) return Icons.business;
+    if (lowerSource.contains('investment')) return Icons.trending_up;
+    if (lowerSource.contains('gift')) return Icons.card_giftcard;
+
+    return Icons.account_balance_wallet;
   }
 }
