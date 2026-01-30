@@ -19,6 +19,15 @@ class _IncomeListScreenState extends ConsumerState<IncomeListScreen> {
   DateTime? _endDate;
 
   @override
+  void initState() {
+    super.initState();
+    // Load income when screen first opens
+    Future.microtask(() {
+      ref.read(incomeProvider.notifier).loadIncome();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final incomeAsync = ref.watch(incomeProvider);
 
@@ -111,6 +120,7 @@ class _IncomeListScreenState extends ConsumerState<IncomeListScreen> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'income_fab',
         onPressed: _navigateToAddIncome,
         child: const Icon(Icons.add),
       ),

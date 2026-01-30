@@ -19,6 +19,15 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
   DateTime? _endDate;
 
   @override
+  void initState() {
+    super.initState();
+    // Load expenses when screen first opens
+    Future.microtask(() {
+      ref.read(expenseProvider.notifier).loadExpenses();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final expensesAsync = ref.watch(expenseProvider);
 
@@ -38,11 +47,13 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          await ref.read(expenseProvider.notifier).loadExpenses(
-            startDate: _startDate,
-            endDate: _endDate,
-            category: _selectedCategory,
-          );
+          await ref
+              .read(expenseProvider.notifier)
+              .loadExpenses(
+                startDate: _startDate,
+                endDate: _endDate,
+                category: _selectedCategory,
+              );
         },
         child: expensesAsync.when(
           data: (expenses) {
@@ -59,16 +70,16 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
                     const SizedBox(height: 16),
                     Text(
                       'No expenses yet',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: Colors.grey[600],
-                      ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.titleLarge?.copyWith(color: Colors.grey[600]),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       'Tap + to add your first expense',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.grey[500],
-                      ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium?.copyWith(color: Colors.grey[500]),
                     ),
                   ],
                 ),
@@ -88,9 +99,7 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
               },
             );
           },
-          loading: () => const Center(
-            child: CircularProgressIndicator(),
-          ),
+          loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, stack) => Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -111,6 +120,7 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'expense_fab',
         onPressed: _navigateToAddExpense,
         child: const Icon(Icons.add),
       ),
@@ -120,18 +130,18 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
   void _navigateToAddExpense() async {
     final result = await Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => const AddExpenseScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const AddExpenseScreen()),
     );
 
     if (result == true && mounted) {
       // Refresh list after adding
-      ref.read(expenseProvider.notifier).loadExpenses(
-        startDate: _startDate,
-        endDate: _endDate,
-        category: _selectedCategory,
-      );
+      ref
+          .read(expenseProvider.notifier)
+          .loadExpenses(
+            startDate: _startDate,
+            endDate: _endDate,
+            category: _selectedCategory,
+          );
     }
   }
 
@@ -145,11 +155,13 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
 
     if (result == true && mounted) {
       // Refresh list after editing
-      ref.read(expenseProvider.notifier).loadExpenses(
-        startDate: _startDate,
-        endDate: _endDate,
-        category: _selectedCategory,
-      );
+      ref
+          .read(expenseProvider.notifier)
+          .loadExpenses(
+            startDate: _startDate,
+            endDate: _endDate,
+            category: _selectedCategory,
+          );
     }
   }
 
@@ -168,7 +180,9 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
             onPressed: () async {
               Navigator.pop(context);
               try {
-                await ref.read(expenseProvider.notifier).deleteExpense(expenseId);
+                await ref
+                    .read(expenseProvider.notifier)
+                    .deleteExpense(expenseId);
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Expense deleted')),
@@ -176,9 +190,9 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
                 }
               } catch (e) {
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error: $e')),
-                  );
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text('Error: $e')));
                 }
               }
             },

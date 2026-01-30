@@ -1,15 +1,19 @@
 import 'package:sqflite/sqflite.dart';
-import '../../domain/repositories/income_repository.dart';
-import '../models/income_model.dart';
-import '../datasources/local_database.dart';
+import 'package:expense_tracker/domain/repositories/income_repository.dart';
+import 'package:expense_tracker/data/models/income_model.dart';
+import 'package:expense_tracker/data/datasources/local_database.dart';
 
 /// SQLite implementation of IncomeRepository
 class IncomeRepositoryImpl implements IncomeRepository {
   final LocalDatabase _localDatabase;
+  Database? _cachedDb;
 
   IncomeRepositoryImpl(this._localDatabase);
 
-  Future<Database> get _db => _localDatabase.database;
+  Future<Database> get _db async {
+    _cachedDb ??= await _localDatabase.database;
+    return _cachedDb!;
+  }
 
   @override
   Future<List<IncomeModel>> getAllIncome({
@@ -20,7 +24,7 @@ class IncomeRepositoryImpl implements IncomeRepository {
     int? offset,
   }) async {
     final db = await _db;
-    
+
     String whereClause = '';
     List<dynamic> whereArgs = [];
 
@@ -28,13 +32,13 @@ class IncomeRepositoryImpl implements IncomeRepository {
       whereClause += 'date >= ?';
       whereArgs.add(startDate.toIso8601String());
     }
-    
+
     if (endDate != null) {
       if (whereClause.isNotEmpty) whereClause += ' AND ';
       whereClause += 'date <= ?';
       whereArgs.add(endDate.toIso8601String());
     }
-    
+
     if (category != null) {
       if (whereClause.isNotEmpty) whereClause += ' AND ';
       whereClause += 'category = ?';
@@ -56,7 +60,7 @@ class IncomeRepositoryImpl implements IncomeRepository {
   @override
   Future<IncomeModel?> getIncomeById(String id) async {
     final db = await _db;
-    
+
     final results = await db.query(
       'income',
       where: 'id = ?',
@@ -75,7 +79,7 @@ class IncomeRepositoryImpl implements IncomeRepository {
     String? category,
   }) async {
     final db = await _db;
-    
+
     String whereClause = '';
     List<dynamic> whereArgs = [];
 
@@ -83,13 +87,13 @@ class IncomeRepositoryImpl implements IncomeRepository {
       whereClause += 'date >= ?';
       whereArgs.add(startDate.toIso8601String());
     }
-    
+
     if (endDate != null) {
       if (whereClause.isNotEmpty) whereClause += ' AND ';
       whereClause += 'date <= ?';
       whereArgs.add(endDate.toIso8601String());
     }
-    
+
     if (category != null) {
       if (whereClause.isNotEmpty) whereClause += ' AND ';
       whereClause += 'category = ?';
@@ -97,8 +101,8 @@ class IncomeRepositoryImpl implements IncomeRepository {
     }
 
     final result = await db.rawQuery(
-      'SELECT COALESCE(SUM(amount), 0.0) as total FROM income' +
-      (whereClause.isEmpty ? '' : ' WHERE $whereClause'),
+      'SELECT COALESCE(SUM(amount), 0.0) as total FROM income'
+      '${whereClause.isEmpty ? '' : ' WHERE $whereClause'}',
       whereArgs.isEmpty ? null : whereArgs,
     );
 
@@ -128,10 +132,8 @@ class IncomeRepositoryImpl implements IncomeRepository {
     }
 
     final db = await _db;
-    
-    final updatedIncome = income.copyWith(
-      updatedAt: DateTime.now(),
-    );
+
+    final updatedIncome = income.copyWith(updatedAt: DateTime.now());
 
     final count = await db.update(
       'income',
@@ -148,12 +150,8 @@ class IncomeRepositoryImpl implements IncomeRepository {
   @override
   Future<void> deleteIncome(String id) async {
     final db = await _db;
-    
-    final count = await db.delete(
-      'income',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+
+    final count = await db.delete('income', where: 'id = ?', whereArgs: [id]);
 
     if (count == 0) {
       throw StateError('Income with id $id not found');
@@ -169,7 +167,7 @@ class IncomeRepositoryImpl implements IncomeRepository {
   @override
   Future<List<IncomeModel>> searchIncome(String query) async {
     final db = await _db;
-    
+
     final results = await db.query(
       'income',
       where: 'description LIKE ? OR source LIKE ? OR category LIKE ?',
@@ -186,7 +184,7 @@ class IncomeRepositoryImpl implements IncomeRepository {
     DateTime? endDate,
   }) async {
     final db = await _db;
-    
+
     String whereClause = '';
     List<dynamic> whereArgs = [];
 
@@ -194,7 +192,7 @@ class IncomeRepositoryImpl implements IncomeRepository {
       whereClause += 'date >= ?';
       whereArgs.add(startDate.toIso8601String());
     }
-    
+
     if (endDate != null) {
       if (whereClause.isNotEmpty) whereClause += ' AND ';
       whereClause += 'date <= ?';
@@ -202,18 +200,17 @@ class IncomeRepositoryImpl implements IncomeRepository {
     }
 
     final results = await db.rawQuery(
-      'SELECT source, SUM(amount) as total ' +
-      'FROM income' +
-      (whereClause.isEmpty ? '' : ' WHERE $whereClause') +
+      'SELECT source, SUM(amount) as total '
+      'FROM income'
+      '${whereClause.isEmpty ? '' : ' WHERE $whereClause'}'
       ' GROUP BY source',
       whereArgs.isEmpty ? null : whereArgs,
     );
 
     return Map.fromEntries(
-      results.map((row) => MapEntry(
-        row['source'] as String,
-        row['total'] as double,
-      )),
+      results.map(
+        (row) => MapEntry(row['source'] as String, row['total'] as double),
+      ),
     );
   }
 }

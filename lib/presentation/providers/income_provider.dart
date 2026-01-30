@@ -8,8 +8,8 @@ import 'expense_provider.dart'; // For DateRange
 class IncomeNotifier extends StateNotifier<AsyncValue<List<IncomeModel>>> {
   final IncomeRepository _repository;
 
-  IncomeNotifier(this._repository) : super(const AsyncValue.loading()) {
-    loadIncome();
+  IncomeNotifier(this._repository) : super(const AsyncValue.data([])) {
+    // Don't auto-load - let screens call loadIncome() when needed
   }
 
   /// Load all income entries
@@ -19,7 +19,7 @@ class IncomeNotifier extends StateNotifier<AsyncValue<List<IncomeModel>>> {
     String? category,
   }) async {
     state = const AsyncValue.loading();
-    
+
     try {
       final income = await _repository.getAllIncome(
         startDate: startDate,
@@ -65,7 +65,7 @@ class IncomeNotifier extends StateNotifier<AsyncValue<List<IncomeModel>>> {
   /// Search income
   Future<void> searchIncome(String query) async {
     state = const AsyncValue.loading();
-    
+
     try {
       final income = await _repository.searchIncome(query);
       state = AsyncValue.data(income);
@@ -76,13 +76,17 @@ class IncomeNotifier extends StateNotifier<AsyncValue<List<IncomeModel>>> {
 }
 
 /// Provider for income list
-final incomeProvider = StateNotifierProvider<IncomeNotifier, AsyncValue<List<IncomeModel>>>((ref) {
-  final repository = ref.watch(incomeRepositoryProvider);
-  return IncomeNotifier(repository);
-});
+final incomeProvider =
+    StateNotifierProvider<IncomeNotifier, AsyncValue<List<IncomeModel>>>((ref) {
+      final repository = ref.watch(incomeRepositoryProvider);
+      return IncomeNotifier(repository);
+    });
 
 /// Provider for total income (computed)
-final totalIncomeProvider = FutureProvider.family<double, DateRange?>((ref, dateRange) async {
+final totalIncomeProvider = FutureProvider.family<double, DateRange?>((
+  ref,
+  dateRange,
+) async {
   final repository = ref.watch(incomeRepositoryProvider);
   return await repository.getTotalIncome(
     startDate: dateRange?.start,
@@ -91,10 +95,14 @@ final totalIncomeProvider = FutureProvider.family<double, DateRange?>((ref, date
 });
 
 /// Provider for income by source
-final incomeBySourceProvider = FutureProvider.family<Map<String, double>, DateRange?>((ref, dateRange) async {
-  final repository = ref.watch(incomeRepositoryProvider);
-  return await repository.getIncomeBySource(
-    startDate: dateRange?.start,
-    endDate: dateRange?.end,
-  );
-});
+final incomeBySourceProvider =
+    FutureProvider.family<Map<String, double>, DateRange?>((
+      ref,
+      dateRange,
+    ) async {
+      final repository = ref.watch(incomeRepositoryProvider);
+      return await repository.getIncomeBySource(
+        startDate: dateRange?.start,
+        endDate: dateRange?.end,
+      );
+    });

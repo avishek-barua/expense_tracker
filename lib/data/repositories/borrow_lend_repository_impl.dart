@@ -1,17 +1,20 @@
 import 'package:sqflite/sqflite.dart';
-// import '../domain/repositories/borrow_lend_repository.dart';
-import '../../domain/repositories/borrow_lend_repository.dart';
-import '../models/borrow_lend_model.dart';
-import '../models/repayment_model.dart';
-import '../datasources/local_database.dart';
+import 'package:expense_tracker/domain/repositories/borrow_lend_repository.dart';
+import 'package:expense_tracker/data/models/borrow_lend_model.dart';
+import 'package:expense_tracker/data/models/repayment_model.dart';
+import 'package:expense_tracker/data/datasources/local_database.dart';
 
 /// SQLite implementation of BorrowLendRepository
 class BorrowLendRepositoryImpl implements BorrowLendRepository {
   final LocalDatabase _localDatabase;
+  Database? _cachedDb;
 
   BorrowLendRepositoryImpl(this._localDatabase);
 
-  Future<Database> get _db => _localDatabase.database;
+  Future<Database> get _db async {
+    _cachedDb ??= await _localDatabase.database;
+    return _cachedDb!;
+  }
 
   @override
   Future<List<BorrowLendModel>> getAllTransactions({
@@ -20,7 +23,7 @@ class BorrowLendRepositoryImpl implements BorrowLendRepository {
     String? personName,
   }) async {
     final db = await _db;
-    
+
     String whereClause = '';
     List<dynamic> whereArgs = [];
 
@@ -28,13 +31,13 @@ class BorrowLendRepositoryImpl implements BorrowLendRepository {
       whereClause += 'type = ?';
       whereArgs.add(type.value);
     }
-    
+
     if (status != null) {
       if (whereClause.isNotEmpty) whereClause += ' AND ';
       whereClause += 'status = ?';
       whereArgs.add(status.value);
     }
-    
+
     if (personName != null) {
       if (whereClause.isNotEmpty) whereClause += ' AND ';
       whereClause += 'person_name LIKE ?';
@@ -54,7 +57,7 @@ class BorrowLendRepositoryImpl implements BorrowLendRepository {
   @override
   Future<BorrowLendModel?> getTransactionById(String id) async {
     final db = await _db;
-    
+
     final results = await db.query(
       'borrow_lend',
       where: 'id = ?',
@@ -89,10 +92,8 @@ class BorrowLendRepositoryImpl implements BorrowLendRepository {
     }
 
     final db = await _db;
-    
-    final updatedTransaction = transaction.copyWith(
-      updatedAt: DateTime.now(),
-    );
+
+    final updatedTransaction = transaction.copyWith(updatedAt: DateTime.now());
 
     final count = await db.update(
       'borrow_lend',
@@ -109,7 +110,7 @@ class BorrowLendRepositoryImpl implements BorrowLendRepository {
   @override
   Future<void> deleteTransaction(String id) async {
     final db = await _db;
-    
+
     // Foreign key cascade will auto-delete repayments
     final count = await db.delete(
       'borrow_lend',
@@ -125,7 +126,7 @@ class BorrowLendRepositoryImpl implements BorrowLendRepository {
   @override
   Future<List<RepaymentModel>> getRepayments(String borrowLendId) async {
     final db = await _db;
-    
+
     final results = await db.query(
       'repayments',
       where: 'borrow_lend_id = ?',
@@ -148,13 +149,15 @@ class BorrowLendRepositoryImpl implements BorrowLendRepository {
     // Get the parent transaction
     final transaction = await getTransactionById(repayment.borrowLendId);
     if (transaction == null) {
-      throw StateError('Transaction with id ${repayment.borrowLendId} not found');
+      throw StateError(
+        'Transaction with id ${repayment.borrowLendId} not found',
+      );
     }
 
     // Validate repayment amount
     if (repayment.amount > transaction.remainingAmount + 0.01) {
       throw ArgumentError(
-        'Repayment amount (${repayment.amount}) exceeds remaining balance (${transaction.remainingAmount})'
+        'Repayment amount (${repayment.amount}) exceeds remaining balance (${transaction.remainingAmount})',
       );
     }
 
@@ -198,7 +201,7 @@ class BorrowLendRepositoryImpl implements BorrowLendRepository {
     }
 
     final repayment = RepaymentModel.fromMap(repaymentResults.first);
-    
+
     // Get parent transaction
     final transaction = await getTransactionById(repayment.borrowLendId);
     if (transaction == null) {
@@ -208,21 +211,17 @@ class BorrowLendRepositoryImpl implements BorrowLendRepository {
     // Use transaction to ensure atomicity
     await db.transaction((txn) async {
       // Delete repayment
-      await txn.delete(
-        'repayments',
-        where: 'id = ?',
-        whereArgs: [repaymentId],
-      );
+      await txn.delete('repayments', where: 'id = ?', whereArgs: [repaymentId]);
 
       // Recalculate remaining amount from scratch
       final allRepayments = await getRepayments(transaction.id);
       final totalRepaid = allRepayments
-          .where((r) => r.id != repaymentId)  // Exclude deleted one
+          .where((r) => r.id != repaymentId) // Exclude deleted one
           .fold<double>(0.0, (sum, r) => sum + r.amount);
 
       final newRemaining = transaction.originalAmount - totalRepaid;
-      final newStatus = newRemaining <= 0.01 
-          ? TransactionStatus.settled 
+      final newStatus = newRemaining <= 0.01
+          ? TransactionStatus.settled
           : TransactionStatus.active;
 
       // Update parent transaction
@@ -244,13 +243,13 @@ class BorrowLendRepositoryImpl implements BorrowLendRepository {
   @override
   Future<double> getTotalBorrowed({bool activeOnly = true}) async {
     final db = await _db;
-    
-    final whereClause = activeOnly 
-        ? "type = 'borrowed' AND status = 'active'" 
+
+    final whereClause = activeOnly
+        ? "type = 'borrowed' AND status = 'active'"
         : "type = 'borrowed'";
 
     final result = await db.rawQuery(
-      'SELECT COALESCE(SUM(remaining_amount), 0.0) as total FROM borrow_lend WHERE $whereClause'
+      'SELECT COALESCE(SUM(remaining_amount), 0.0) as total FROM borrow_lend WHERE $whereClause',
     );
 
     return result.first['total'] as double;
@@ -259,13 +258,13 @@ class BorrowLendRepositoryImpl implements BorrowLendRepository {
   @override
   Future<double> getTotalLent({bool activeOnly = true}) async {
     final db = await _db;
-    
-    final whereClause = activeOnly 
-        ? "type = 'lent' AND status = 'active'" 
+
+    final whereClause = activeOnly
+        ? "type = 'lent' AND status = 'active'"
         : "type = 'lent'";
 
     final result = await db.rawQuery(
-      'SELECT COALESCE(SUM(remaining_amount), 0.0) as total FROM borrow_lend WHERE $whereClause'
+      'SELECT COALESCE(SUM(remaining_amount), 0.0) as total FROM borrow_lend WHERE $whereClause',
     );
 
     return result.first['total'] as double;
@@ -281,7 +280,7 @@ class BorrowLendRepositoryImpl implements BorrowLendRepository {
   @override
   Future<List<BorrowLendModel>> searchByPerson(String query) async {
     final db = await _db;
-    
+
     final results = await db.query(
       'borrow_lend',
       where: 'person_name LIKE ?',
@@ -296,6 +295,7 @@ class BorrowLendRepositoryImpl implements BorrowLendRepository {
   Future<bool> canAddRepayment(String borrowLendId, double amount) async {
     final transaction = await getTransactionById(borrowLendId);
     if (transaction == null) return false;
-    return amount <= transaction.remainingAmount + 0.01;  // Epsilon for float comparison
+    return amount <=
+        transaction.remainingAmount + 0.01; // Epsilon for float comparison
   }
 }

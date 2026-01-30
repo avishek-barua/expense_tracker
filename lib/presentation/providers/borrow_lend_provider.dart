@@ -5,11 +5,12 @@ import 'package:expense_tracker/domain/repositories/borrow_lend_repository.dart'
 import 'providers.dart';
 
 /// State notifier for managing borrow/lend transactions
-class BorrowLendNotifier extends StateNotifier<AsyncValue<List<BorrowLendModel>>> {
+class BorrowLendNotifier
+    extends StateNotifier<AsyncValue<List<BorrowLendModel>>> {
   final BorrowLendRepository _repository;
 
-  BorrowLendNotifier(this._repository) : super(const AsyncValue.loading()) {
-    loadTransactions();
+  BorrowLendNotifier(this._repository) : super(const AsyncValue.data([])) {
+    // Don't auto-load - let screens call loadTransactions() when needed
   }
 
   /// Load all transactions
@@ -19,7 +20,7 @@ class BorrowLendNotifier extends StateNotifier<AsyncValue<List<BorrowLendModel>>
     String? personName,
   }) async {
     state = const AsyncValue.loading();
-    
+
     try {
       final transactions = await _repository.getAllTransactions(
         type: type,
@@ -85,7 +86,7 @@ class BorrowLendNotifier extends StateNotifier<AsyncValue<List<BorrowLendModel>>
   /// Search by person name
   Future<void> searchByPerson(String query) async {
     state = const AsyncValue.loading();
-    
+
     try {
       final transactions = await _repository.searchByPerson(query);
       state = AsyncValue.data(transactions);
@@ -96,40 +97,60 @@ class BorrowLendNotifier extends StateNotifier<AsyncValue<List<BorrowLendModel>>
 }
 
 /// Provider for borrow/lend transaction list
-final borrowLendProvider = StateNotifierProvider<BorrowLendNotifier, AsyncValue<List<BorrowLendModel>>>((ref) {
-  final repository = ref.watch(borrowLendRepositoryProvider);
-  return BorrowLendNotifier(repository);
-});
+final borrowLendProvider =
+    StateNotifierProvider<
+      BorrowLendNotifier,
+      AsyncValue<List<BorrowLendModel>>
+    >((ref) {
+      final repository = ref.watch(borrowLendRepositoryProvider);
+      return BorrowLendNotifier(repository);
+    });
 
 /// Provider for repayments of a specific transaction
-final repaymentsProvider = FutureProvider.family<List<RepaymentModel>, String>((ref, borrowLendId) async {
+final repaymentsProvider = FutureProvider.family<List<RepaymentModel>, String>((
+  ref,
+  borrowLendId,
+) async {
   final repository = ref.watch(borrowLendRepositoryProvider);
   return await repository.getRepayments(borrowLendId);
 });
 
 /// Provider for total borrowed amount
-final totalBorrowedProvider = FutureProvider.family<double, bool>((ref, activeOnly) async {
+final totalBorrowedProvider = FutureProvider.family<double, bool>((
+  ref,
+  activeOnly,
+) async {
   final repository = ref.watch(borrowLendRepositoryProvider);
   return await repository.getTotalBorrowed(activeOnly: activeOnly);
 });
 
 /// Provider for total lent amount
-final totalLentProvider = FutureProvider.family<double, bool>((ref, activeOnly) async {
+final totalLentProvider = FutureProvider.family<double, bool>((
+  ref,
+  activeOnly,
+) async {
   final repository = ref.watch(borrowLendRepositoryProvider);
   return await repository.getTotalLent(activeOnly: activeOnly);
 });
 
 /// Provider for net balance (lent - borrowed)
-final netBalanceProvider = FutureProvider.family<double, bool>((ref, activeOnly) async {
+final netBalanceProvider = FutureProvider.family<double, bool>((
+  ref,
+  activeOnly,
+) async {
   final repository = ref.watch(borrowLendRepositoryProvider);
   return await repository.getNetBalance(activeOnly: activeOnly);
 });
 
 /// Provider to check if repayment amount is valid
-final canAddRepaymentProvider = FutureProvider.family<bool, RepaymentValidationParams>((ref, params) async {
-  final repository = ref.watch(borrowLendRepositoryProvider);
-  return await repository.canAddRepayment(params.borrowLendId, params.amount);
-});
+final canAddRepaymentProvider =
+    FutureProvider.family<bool, RepaymentValidationParams>((ref, params) async {
+      final repository = ref.watch(borrowLendRepositoryProvider);
+      return await repository.canAddRepayment(
+        params.borrowLendId,
+        params.amount,
+      );
+    });
 
 /// Helper class for repayment validation parameters
 class RepaymentValidationParams {

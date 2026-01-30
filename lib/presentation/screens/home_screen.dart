@@ -15,21 +15,26 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
 
-  // List of screens for each tab
-  final List<Widget> _screens = [
-    const DashboardScreen(),
-    const ExpenseListScreen(),
-    const IncomeListScreen(),
-    const BorrowLendListScreen(),
-  ];
+  // Build screen on demand instead of keeping all in memory
+  Widget _buildCurrentScreen() {
+    switch (_currentIndex) {
+      case 0:
+        return const DashboardScreen();
+      case 1:
+        return const ExpenseListScreen();
+      case 2:
+        return const IncomeListScreen();
+      case 3:
+        return const BorrowLendListScreen();
+      default:
+        return const DashboardScreen();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
-      ),
+      body: _buildCurrentScreen(),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) {
