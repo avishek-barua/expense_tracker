@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/theme/app_theme.dart';
-import '../../../core/utils/currency_formatter.dart';
-import '../../../core/utils/date_utils.dart' as app_date_utils;
-import '../../../presentation/providers/expense_provider.dart';
-import '../../../presentation/providers/income_provider.dart';
-import '../../../presentation/providers/borrow_lend_provider.dart';
+import '../../core/theme/app_theme.dart';
+import '../../core/utils/currency_formatter.dart';
+import '../../core/utils/date_utils.dart' as app_date_utils;
+import '../../presentation/providers/expense_provider.dart';
+import '../../presentation/providers/income_provider.dart';
+import '../../presentation/providers/borrow_lend_provider.dart';
 import '../expenses/add_expense_screen.dart';
 import '../income/add_income_screen.dart';
 
@@ -55,9 +55,13 @@ class DashboardScreen extends ConsumerWidget {
             // Income/Expense cards
             Row(
               children: [
-                Expanded(child: _buildIncomeCard(context, ref, monthRange)),
+                Expanded(
+                  child: _buildIncomeCard(context, ref, monthRange),
+                ),
                 const SizedBox(width: 16),
-                Expanded(child: _buildExpenseCard(context, ref, monthRange)),
+                Expanded(
+                  child: _buildExpenseCard(context, ref, monthRange),
+                ),
               ],
             ),
             const SizedBox(height: 16),
@@ -88,8 +92,8 @@ class DashboardScreen extends ConsumerWidget {
               },
             ),
             Text(
-              app_date_utils.DateUtils.formatDateLong(date).split(' ')[0] +
-                  ' ${date.year}',
+              app_date_utils.DateUtils.formatDateLong(date).split(' ')[0] + 
+              ' ${date.year}',
               style: Theme.of(context).textTheme.titleLarge,
             ),
             IconButton(
@@ -104,11 +108,7 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildNetBalanceCard(
-    BuildContext context,
-    WidgetRef ref,
-    DateRange range,
-  ) {
+  Widget _buildNetBalanceCard(BuildContext context, WidgetRef ref, DateRange range) {
     final totalIncomeAsync = ref.watch(totalIncomeProvider(range));
     final totalExpensesAsync = ref.watch(totalExpensesProvider(range));
 
@@ -120,9 +120,9 @@ class DashboardScreen extends ConsumerWidget {
           children: [
             Text(
               'Net Cash Flow',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(color: Colors.white70),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: Colors.white70,
+              ),
             ),
             const SizedBox(height: 8),
             totalIncomeAsync.when(
@@ -133,31 +133,26 @@ class DashboardScreen extends ConsumerWidget {
                     children: [
                       Text(
                         CurrencyFormatter.format(netBalance),
-                        style: Theme.of(context).textTheme.displaySmall
-                            ?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
+                        style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       Text(
                         'This Month',
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.white70,
+                        ),
                       ),
                     ],
                   );
                 },
-                loading: () =>
-                    const CircularProgressIndicator(color: Colors.white),
-                error: (_, __) =>
-                    const Text('Error', style: TextStyle(color: Colors.white)),
+                loading: () => const CircularProgressIndicator(color: Colors.white),
+                error: (_, __) => const Text('Error', style: TextStyle(color: Colors.white)),
               ),
-              loading: () =>
-                  const CircularProgressIndicator(color: Colors.white),
-              error: (_, __) =>
-                  const Text('Error', style: TextStyle(color: Colors.white)),
+              loading: () => const CircularProgressIndicator(color: Colors.white),
+              error: (_, __) => const Text('Error', style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -165,11 +160,7 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildIncomeCard(
-    BuildContext context,
-    WidgetRef ref,
-    DateRange range,
-  ) {
+  Widget _buildIncomeCard(BuildContext context, WidgetRef ref, DateRange range) {
     final totalIncomeAsync = ref.watch(totalIncomeProvider(range));
 
     return Card(
@@ -180,13 +171,12 @@ class DashboardScreen extends ConsumerWidget {
           children: [
             Row(
               children: [
-                Icon(
-                  Icons.arrow_downward,
-                  color: AppTheme.incomeColor,
-                  size: 20,
-                ),
+                Icon(Icons.arrow_downward, color: AppTheme.incomeColor, size: 20),
                 const SizedBox(width: 8),
-                Text('Income', style: Theme.of(context).textTheme.titleSmall),
+                Text(
+                  'Income',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -211,11 +201,7 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildExpenseCard(
-    BuildContext context,
-    WidgetRef ref,
-    DateRange range,
-  ) {
+  Widget _buildExpenseCard(BuildContext context, WidgetRef ref, DateRange range) {
     final totalExpensesAsync = ref.watch(totalExpensesProvider(range));
 
     return Card(
@@ -226,13 +212,12 @@ class DashboardScreen extends ConsumerWidget {
           children: [
             Row(
               children: [
-                Icon(
-                  Icons.arrow_upward,
-                  color: AppTheme.expenseColor,
-                  size: 20,
-                ),
+                Icon(Icons.arrow_upward, color: AppTheme.expenseColor, size: 20),
                 const SizedBox(width: 8),
-                Text('Expenses', style: Theme.of(context).textTheme.titleSmall),
+                Text(
+                  'Expenses',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -289,20 +274,22 @@ class DashboardScreen extends ConsumerWidget {
                       totalBorrowedAsync.when(
                         data: (borrowed) => Text(
                           CurrencyFormatter.format(borrowed),
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(
-                                color: AppTheme.borrowedColor,
-                                fontWeight: FontWeight.bold,
-                              ),
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: AppTheme.borrowedColor,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                        loading: () =>
-                            const CircularProgressIndicator(strokeWidth: 2),
+                        loading: () => const CircularProgressIndicator(strokeWidth: 2),
                         error: (_, __) => const Text('Error'),
                       ),
                     ],
                   ),
                 ),
-                Container(width: 1, height: 40, color: AppTheme.dividerColor),
+                Container(
+                  width: 1,
+                  height: 40,
+                  color: AppTheme.dividerColor,
+                ),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
@@ -317,14 +304,12 @@ class DashboardScreen extends ConsumerWidget {
                       totalLentAsync.when(
                         data: (lent) => Text(
                           CurrencyFormatter.format(lent),
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(
-                                color: AppTheme.lentColor,
-                                fontWeight: FontWeight.bold,
-                              ),
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: AppTheme.lentColor,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                        loading: () =>
-                            const CircularProgressIndicator(strokeWidth: 2),
+                        loading: () => const CircularProgressIndicator(strokeWidth: 2),
                         error: (_, __) => const Text('Error'),
                       ),
                     ],
@@ -413,7 +398,10 @@ class DashboardScreen extends ConsumerWidget {
             const SizedBox(height: 8),
             Text(
               label,
-              style: TextStyle(color: color, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ],
         ),

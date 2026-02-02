@@ -1,19 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../data/models/borrow_lend_model.dart';
-import '../../../data/models/repayment_model.dart';
+import '../../data/models/borrow_lend_model.dart';
+import '../../data/models/repayment_model.dart';
 import '../../providers/borrow_lend_provider.dart';
-import '../../../core/utils/currency_formatter.dart';
-import '../../../core/utils/date_utils.dart' as app_date_utils;
-import '../../../core/theme/app_theme.dart';
+import '../../core/utils/currency_formatter.dart';
+import '../../core/utils/date_utils.dart' as app_date_utils;
+import '../../core/theme/app_theme.dart';
 import '../../../core/constants/app_constants.dart';
 
 /// Detail screen for a borrow/lend transaction showing repayment history
 class TransactionDetailScreen extends ConsumerWidget {
   final BorrowLendModel transaction;
 
-  const TransactionDetailScreen({super.key, required this.transaction});
+  const TransactionDetailScreen({
+    super.key,
+    required this.transaction,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -23,7 +26,9 @@ class TransactionDetailScreen extends ConsumerWidget {
     final isSettled = transaction.status == TransactionStatus.settled;
 
     return Scaffold(
-      appBar: AppBar(title: Text(transaction.personName)),
+      appBar: AppBar(
+        title: Text(transaction.personName),
+      ),
       body: Column(
         children: [
           // Transaction summary card
@@ -41,19 +46,17 @@ class TransactionDetailScreen extends ConsumerWidget {
                         children: [
                           Text(
                             isBorrowed ? 'You Borrowed' : 'You Lent',
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(color: AppTheme.textSecondary),
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: AppTheme.textSecondary,
+                            ),
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            CurrencyFormatter.format(
-                              transaction.originalAmount,
+                            CurrencyFormatter.format(transaction.originalAmount),
+                            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                              color: color,
+                              fontWeight: FontWeight.bold,
                             ),
-                            style: Theme.of(context).textTheme.headlineSmall
-                                ?.copyWith(
-                                  color: color,
-                                  fontWeight: FontWeight.bold,
-                                ),
                           ),
                         ],
                       ),
@@ -63,7 +66,7 @@ class TransactionDetailScreen extends ConsumerWidget {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: isSettled
+                          color: isSettled 
                               ? AppTheme.successColor.withValues(alpha: 0.2)
                               : color.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(8),
@@ -131,8 +134,9 @@ class TransactionDetailScreen extends ConsumerWidget {
                         children: [
                           Text(
                             'Notes',
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(color: AppTheme.textSecondary),
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: AppTheme.textSecondary,
+                            ),
                           ),
                           const SizedBox(height: 4),
                           Text(transaction.notes!),
@@ -209,19 +213,14 @@ class TransactionDetailScreen extends ConsumerWidget {
                     ref.invalidate(repaymentsProvider(transaction.id));
                   },
                   child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     itemCount: repayments.length,
                     itemBuilder: (context, index) {
                       final repayment = repayments[index];
                       return Card(
                         child: ListTile(
                           leading: CircleAvatar(
-                            backgroundColor: AppTheme.successColor.withValues(
-                              alpha: 0.2,
-                            ),
+                            backgroundColor: AppTheme.successColor.withValues(alpha: 0.2),
                             child: const Icon(
                               Icons.payment,
                               color: AppTheme.successColor,
@@ -234,25 +233,16 @@ class TransactionDetailScreen extends ConsumerWidget {
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                app_date_utils.DateUtils.formatDate(
-                                  repayment.date,
-                                ),
-                              ),
+                              Text(app_date_utils.DateUtils.formatDate(repayment.date)),
                               if (repayment.notes != null)
                                 Text(
                                   repayment.notes!,
-                                  style: const TextStyle(
-                                    fontStyle: FontStyle.italic,
-                                  ),
+                                  style: const TextStyle(fontStyle: FontStyle.italic),
                                 ),
                             ],
                           ),
                           trailing: IconButton(
-                            icon: const Icon(
-                              Icons.delete_outline,
-                              color: Colors.red,
-                            ),
+                            icon: const Icon(Icons.delete_outline, color: Colors.red),
                             onPressed: () => _confirmDeleteRepayment(
                               context,
                               ref,
@@ -266,8 +256,9 @@ class TransactionDetailScreen extends ConsumerWidget {
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) =>
-                  Center(child: Text('Error loading repayments: $error')),
+              error: (error, stack) => Center(
+                child: Text('Error loading repayments: $error'),
+              ),
             ),
           ),
         ],
@@ -280,16 +271,16 @@ class TransactionDetailScreen extends ConsumerWidget {
       children: [
         Text(
           label,
-          style: Theme.of(
-            context,
-          ).textTheme.bodySmall?.copyWith(color: AppTheme.textSecondary),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: AppTheme.textSecondary,
+          ),
         ),
         const SizedBox(height: 4),
         Text(
           value,
-          style: Theme.of(
-            context,
-          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ],
     );
@@ -314,16 +305,11 @@ class TransactionDetailScreen extends ConsumerWidget {
                   decoration: InputDecoration(
                     labelText: 'Amount',
                     prefixText: '৳ ',
-                    hintText:
-                        'Max: ${CurrencyFormatter.format(transaction.remainingAmount)}',
+                    hintText: 'Max: ${CurrencyFormatter.format(transaction.remainingAmount)}',
                   ),
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: [
-                    FilteringTextInputFormatter.allow(
-                      RegExp(r'^\d+\.?\d{0,2}'),
-                    ),
+                    FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
                   ],
                   autofocus: true,
                 ),
@@ -380,18 +366,14 @@ class TransactionDetailScreen extends ConsumerWidget {
                 final amount = double.tryParse(amountText);
                 if (amount == null || amount <= 0) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Please enter a valid amount'),
-                    ),
+                    const SnackBar(content: Text('Please enter a valid amount')),
                   );
                   return;
                 }
 
                 if (amount > transaction.remainingAmount + 0.01) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Amount exceeds remaining balance'),
-                    ),
+                    const SnackBar(content: Text('Amount exceeds remaining balance')),
                   );
                   return;
                 }
@@ -406,24 +388,20 @@ class TransactionDetailScreen extends ConsumerWidget {
                 );
 
                 try {
-                  await ref
-                      .read(borrowLendProvider.notifier)
-                      .addRepayment(repayment);
+                  await ref.read(borrowLendProvider.notifier).addRepayment(repayment);
                   if (context.mounted) {
                     Navigator.pop(context);
                     // Just invalidate the cache - user can pull to refresh if needed
                     ref.invalidate(repaymentsProvider(transaction.id));
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Repayment added - pull to refresh list'),
-                      ),
+                      const SnackBar(content: Text('Repayment added - pull to refresh list')),
                     );
                   }
                 } catch (e) {
                   if (context.mounted) {
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(SnackBar(content: Text('Error: $e')));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error: $e')),
+                    );
                   }
                 }
               },
@@ -435,11 +413,7 @@ class TransactionDetailScreen extends ConsumerWidget {
     );
   }
 
-  void _confirmDeleteRepayment(
-    BuildContext context,
-    WidgetRef ref,
-    String repaymentId,
-  ) {
+  void _confirmDeleteRepayment(BuildContext context, WidgetRef ref, String repaymentId) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -454,23 +428,19 @@ class TransactionDetailScreen extends ConsumerWidget {
             onPressed: () async {
               Navigator.pop(context);
               try {
-                await ref
-                    .read(borrowLendProvider.notifier)
-                    .deleteRepayment(repaymentId);
+                await ref.read(borrowLendProvider.notifier).deleteRepayment(repaymentId);
                 if (context.mounted) {
                   // Just invalidate the cache - user can pull to refresh if needed
                   ref.invalidate(repaymentsProvider(transaction.id));
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Repayment deleted - pull to refresh list'),
-                    ),
+                    const SnackBar(content: Text('Repayment deleted - pull to refresh list')),
                   );
                 }
               } catch (e) {
                 if (context.mounted) {
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(SnackBar(content: Text('Error: $e')));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: $e')),
+                  );
                 }
               }
             },

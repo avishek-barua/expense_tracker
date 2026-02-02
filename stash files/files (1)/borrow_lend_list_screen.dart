@@ -4,15 +4,14 @@ import '../../providers/borrow_lend_provider.dart';
 import '../../widgets/borrow_lend_card.dart';
 import 'add_borrow_lend_screen.dart';
 import 'transaction_detail_screen.dart';
-import '../../../data/models/borrow_lend_model.dart';
+import '../../data/models/borrow_lend_model.dart';
 
 /// Borrow/Lend list screen with full CRUD functionality
 class BorrowLendListScreen extends ConsumerStatefulWidget {
   const BorrowLendListScreen({super.key});
 
   @override
-  ConsumerState<BorrowLendListScreen> createState() =>
-      _BorrowLendListScreenState();
+  ConsumerState<BorrowLendListScreen> createState() => _BorrowLendListScreenState();
 }
 
 class _BorrowLendListScreenState extends ConsumerState<BorrowLendListScreen> {
@@ -48,9 +47,10 @@ class _BorrowLendListScreenState extends ConsumerState<BorrowLendListScreen> {
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          ref
-              .read(borrowLendProvider.notifier)
-              .loadTransactions(type: _selectedType, status: _selectedStatus);
+          ref.read(borrowLendProvider.notifier).loadTransactions(
+            type: _selectedType,
+            status: _selectedStatus,
+          );
         },
         child: transactionsAsync.when(
           data: (transactions) {
@@ -67,16 +67,16 @@ class _BorrowLendListScreenState extends ConsumerState<BorrowLendListScreen> {
                     const SizedBox(height: 16),
                     Text(
                       'No transactions yet',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.titleLarge?.copyWith(color: Colors.grey[600]),
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: Colors.grey[600],
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       'Tap + to add your first transaction',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodyMedium?.copyWith(color: Colors.grey[500]),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.grey[500],
+                      ),
                     ),
                   ],
                 ),
@@ -104,13 +104,11 @@ class _BorrowLendListScreenState extends ConsumerState<BorrowLendListScreen> {
                       ),
                     ),
                   ),
-                  ...activeTransactions.map(
-                    (transaction) => BorrowLendCard(
-                      transaction: transaction,
-                      onTap: () => _navigateToDetail(transaction),
-                      onDelete: () => _confirmDelete(transaction.id),
-                    ),
-                  ),
+                  ...activeTransactions.map((transaction) => BorrowLendCard(
+                    transaction: transaction,
+                    onTap: () => _navigateToDetail(transaction),
+                    onDelete: () => _confirmDelete(transaction.id),
+                  )),
                 ],
                 if (settledTransactions.isNotEmpty) ...[
                   Padding(
@@ -123,18 +121,18 @@ class _BorrowLendListScreenState extends ConsumerState<BorrowLendListScreen> {
                       ),
                     ),
                   ),
-                  ...settledTransactions.map(
-                    (transaction) => BorrowLendCard(
-                      transaction: transaction,
-                      onTap: () => _navigateToDetail(transaction),
-                      onDelete: () => _confirmDelete(transaction.id),
-                    ),
-                  ),
+                  ...settledTransactions.map((transaction) => BorrowLendCard(
+                    transaction: transaction,
+                    onTap: () => _navigateToDetail(transaction),
+                    onDelete: () => _confirmDelete(transaction.id),
+                  )),
                 ],
               ],
             );
           },
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const Center(
+            child: CircularProgressIndicator(),
+          ),
           error: (error, stack) => Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -165,13 +163,16 @@ class _BorrowLendListScreenState extends ConsumerState<BorrowLendListScreen> {
   void _navigateToAdd() async {
     final result = await Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const AddBorrowLendScreen()),
+      MaterialPageRoute(
+        builder: (context) => const AddBorrowLendScreen(),
+      ),
     );
 
     if (result == true && mounted) {
-      ref
-          .read(borrowLendProvider.notifier)
-          .loadTransactions(type: _selectedType, status: _selectedStatus);
+      ref.read(borrowLendProvider.notifier).loadTransactions(
+        type: _selectedType,
+        status: _selectedStatus,
+      );
     }
   }
 
@@ -184,9 +185,10 @@ class _BorrowLendListScreenState extends ConsumerState<BorrowLendListScreen> {
     );
 
     if (result == true && mounted) {
-      ref
-          .read(borrowLendProvider.notifier)
-          .loadTransactions(type: _selectedType, status: _selectedStatus);
+      ref.read(borrowLendProvider.notifier).loadTransactions(
+        type: _selectedType,
+        status: _selectedStatus,
+      );
     }
   }
 
@@ -207,30 +209,22 @@ class _BorrowLendListScreenState extends ConsumerState<BorrowLendListScreen> {
             onPressed: () async {
               Navigator.pop(context);
               try {
-                await ref
-                    .read(borrowLendProvider.notifier)
-                    .deleteTransaction(transactionId);
+                await ref.read(borrowLendProvider.notifier).deleteTransaction(transactionId);
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Transaction deleted')),
                   );
-                  // Small delay to let database transaction complete
-                  Future.delayed(const Duration(milliseconds: 200), () {
-                    if (mounted) {
-                      ref
-                          .read(borrowLendProvider.notifier)
-                          .loadTransactions(
-                            type: _selectedType,
-                            status: _selectedStatus,
-                          );
-                    }
-                  });
+                  // Reload the list
+                  ref.read(borrowLendProvider.notifier).loadTransactions(
+                    type: _selectedType,
+                    status: _selectedStatus,
+                  );
                 }
               } catch (e) {
                 if (mounted) {
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(SnackBar(content: Text('Error: $e')));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: $e')),
+                  );
                 }
               }
             },
@@ -254,14 +248,8 @@ class _BorrowLendListScreenState extends ConsumerState<BorrowLendListScreen> {
               decoration: const InputDecoration(labelText: 'Type'),
               items: const [
                 DropdownMenuItem(value: null, child: Text('All')),
-                DropdownMenuItem(
-                  value: TransactionType.borrowed,
-                  child: Text('Borrowed'),
-                ),
-                DropdownMenuItem(
-                  value: TransactionType.lent,
-                  child: Text('Lent'),
-                ),
+                DropdownMenuItem(value: TransactionType.borrowed, child: Text('Borrowed')),
+                DropdownMenuItem(value: TransactionType.lent, child: Text('Lent')),
               ],
               onChanged: (value) {
                 setState(() => _selectedType = value);
@@ -273,14 +261,8 @@ class _BorrowLendListScreenState extends ConsumerState<BorrowLendListScreen> {
               decoration: const InputDecoration(labelText: 'Status'),
               items: const [
                 DropdownMenuItem(value: null, child: Text('All')),
-                DropdownMenuItem(
-                  value: TransactionStatus.active,
-                  child: Text('Active'),
-                ),
-                DropdownMenuItem(
-                  value: TransactionStatus.settled,
-                  child: Text('Settled'),
-                ),
+                DropdownMenuItem(value: TransactionStatus.active, child: Text('Active')),
+                DropdownMenuItem(value: TransactionStatus.settled, child: Text('Settled')),
               ],
               onChanged: (value) {
                 setState(() => _selectedStatus = value);
@@ -303,12 +285,10 @@ class _BorrowLendListScreenState extends ConsumerState<BorrowLendListScreen> {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              ref
-                  .read(borrowLendProvider.notifier)
-                  .loadTransactions(
-                    type: _selectedType,
-                    status: _selectedStatus,
-                  );
+              ref.read(borrowLendProvider.notifier).loadTransactions(
+                type: _selectedType,
+                status: _selectedStatus,
+              );
             },
             child: const Text('Apply'),
           ),
