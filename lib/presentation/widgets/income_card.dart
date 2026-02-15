@@ -102,7 +102,7 @@ class IncomeCard extends StatelessWidget {
                 ),
               ),
 
-              // Amount and delete button
+              // Amount
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
@@ -113,14 +113,6 @@ class IncomeCard extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  if (onDelete != null)
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline, size: 20),
-                      color: Colors.red[300],
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      onPressed: onDelete,
-                    ),
                 ],
               ),
             ],

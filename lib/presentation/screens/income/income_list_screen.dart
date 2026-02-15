@@ -88,14 +88,72 @@ class _IncomeListScreenState extends ConsumerState<IncomeListScreen> {
             }
 
             return ListView.builder(
-              padding: const EdgeInsets.symmetric(vertical: 8),
+              padding: const EdgeInsets.only(
+                top: 8,
+                bottom: 80,
+              ), // Bottom padding for FAB
               itemCount: incomeList.length,
               itemBuilder: (context, index) {
                 final income = incomeList[index];
-                return IncomeCard(
-                  income: income,
-                  onTap: () => _navigateToEditIncome(income.id),
-                  onDelete: () => _confirmDelete(income.id),
+                return Dismissible(
+                  key: Key(income.id),
+                  direction: DismissDirection.endToStart,
+                  background: Container(
+                    alignment: Alignment.centerRight,
+                    padding: const EdgeInsets.only(right: 20),
+                    color: Colors.red,
+                    child: const Icon(
+                      Icons.delete,
+                      color: Colors.white,
+                      size: 32,
+                    ),
+                  ),
+                  confirmDismiss: (direction) async {
+                    return await showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Delete Income'),
+                        content: const Text(
+                          'Are you sure you want to delete this income?',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text('Cancel'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text(
+                              'Delete',
+                              style: TextStyle(color: Colors.red),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                  onDismissed: (direction) async {
+                    try {
+                      await ref
+                          .read(incomeProvider.notifier)
+                          .deleteIncome(income.id);
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Income deleted')),
+                        );
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+                      }
+                    }
+                  },
+                  child: IncomeCard(
+                    income: income,
+                    onTap: () => _navigateToEditIncome(income.id),
+                  ),
                 );
               },
             );

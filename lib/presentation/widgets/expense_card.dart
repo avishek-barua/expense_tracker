@@ -43,7 +43,7 @@ class ExpenseCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 16),
-              
+
               // Expense details
               Expanded(
                 child: Column(
@@ -79,17 +79,16 @@ class ExpenseCard extends StatelessWidget {
                         ],
                         Text(
                           app_date_utils.DateUtils.formatRelative(expense.date),
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppTheme.textSecondary,
-                          ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: AppTheme.textSecondary),
                         ),
                       ],
                     ),
                   ],
                 ),
               ),
-              
-              // Amount and delete button
+
+              // Amount
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
@@ -100,14 +99,6 @@ class ExpenseCard extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  if (onDelete != null)
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline, size: 20),
-                      color: Colors.red[300],
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      onPressed: onDelete,
-                    ),
                 ],
               ),
             ],
@@ -119,7 +110,7 @@ class ExpenseCard extends StatelessWidget {
 
   IconData _getCategoryIcon(String? category) {
     if (category == null) return Icons.shopping_bag;
-    
+
     switch (category.toLowerCase()) {
       case 'food & dining':
       case 'food':

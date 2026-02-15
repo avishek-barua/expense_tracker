@@ -88,14 +88,80 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
             }
 
             return ListView.builder(
-              padding: const EdgeInsets.symmetric(vertical: 8),
+              padding: const EdgeInsets.only(
+                top: 8,
+                bottom: 80,
+              ), // Bottom padding for FAB
               itemCount: expenses.length,
               itemBuilder: (context, index) {
                 final expense = expenses[index];
-                return ExpenseCard(
-                  expense: expense,
-                  onTap: () => _navigateToEditExpense(expense.id),
-                  onDelete: () => _confirmDelete(expense.id),
+                return Dismissible(
+                  key: Key(expense.id),
+                  direction: DismissDirection.endToStart,
+                  background: Container(
+                    alignment: Alignment.centerRight,
+                    padding: const EdgeInsets.only(right: 20),
+                    color: Colors.red,
+                    child: const Icon(
+                      Icons.delete,
+                      color: Colors.white,
+                      size: 32,
+                    ),
+                  ),
+                  confirmDismiss: (direction) async {
+                    return await showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Delete Expense'),
+                        content: const Text(
+                          'Are you sure you want to delete this expense?',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text('Cancel'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text(
+                              'Delete',
+                              style: TextStyle(color: Colors.red),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                  onDismissed: (direction) async {
+                    try {
+                      await ref
+                          .read(expenseProvider.notifier)
+                          .deleteExpense(expense.id);
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Text('Expense deleted'),
+                            action: SnackBarAction(
+                              label: 'Undo',
+                              onPressed: () {
+                                // TODO: Implement undo (would need to cache deleted item)
+                              },
+                            ),
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+                      }
+                    }
+                  },
+                  child: ExpenseCard(
+                    expense: expense,
+                    onTap: () => _navigateToEditExpense(expense.id),
+                  ),
                 );
               },
             );
