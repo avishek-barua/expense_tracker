@@ -10,11 +10,29 @@ import '../expenses/add_expense_screen.dart';
 import '../income/add_income_screen.dart';
 
 /// Dashboard screen showing financial overview
-class DashboardScreen extends ConsumerWidget {
+class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DashboardScreen> createState() => DashboardScreenState();
+}
+
+class DashboardScreenState extends ConsumerState<DashboardScreen> {
+  /// Public refresh method that can be called from parent
+  void refresh() {
+    if (mounted) {
+      // Invalidate providers - the watchers will automatically rebuild
+      ref.invalidate(totalExpensesProvider);
+      ref.invalidate(totalIncomeProvider);
+      ref.invalidate(totalBorrowedProvider);
+      ref.invalidate(totalLentProvider);
+      // Force a rebuild of this widget
+      setState(() {});
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     // Get current month date range
     final now = DateTime.now();
     final startOfMonth = app_date_utils.DateUtils.startOfMonth(now);
@@ -35,11 +53,7 @@ class DashboardScreen extends ConsumerWidget {
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          // Refresh all data
-          ref.invalidate(totalExpensesProvider);
-          ref.invalidate(totalIncomeProvider);
-          ref.invalidate(totalBorrowedProvider);
-          ref.invalidate(totalLentProvider);
+          refresh();
         },
         child: ListView(
           padding: const EdgeInsets.all(16),
@@ -88,8 +102,7 @@ class DashboardScreen extends ConsumerWidget {
               },
             ),
             Text(
-              app_date_utils.DateUtils.formatDateLong(date).split(' ')[0] +
-                  ' ${date.year}',
+              '${app_date_utils.DateUtils.formatDateLong(date).split(' ')[0]} ${date.year}',
               style: Theme.of(context).textTheme.titleLarge,
             ),
             IconButton(
@@ -357,13 +370,17 @@ class DashboardScreen extends ConsumerWidget {
                 icon: Icons.add,
                 label: 'Add Expense',
                 color: AppTheme.expenseColor,
-                onTap: () {
-                  Navigator.push(
+                onTap: () async {
+                  final result = await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) => const AddExpenseScreen(),
                     ),
                   );
+                  // Refresh dashboard if something was added
+                  if (result == true) {
+                    refresh();
+                  }
                 },
               ),
             ),
@@ -374,13 +391,17 @@ class DashboardScreen extends ConsumerWidget {
                 icon: Icons.add,
                 label: 'Add Income',
                 color: AppTheme.incomeColor,
-                onTap: () {
-                  Navigator.push(
+                onTap: () async {
+                  final result = await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) => const AddIncomeScreen(),
                     ),
                   );
+                  // Refresh dashboard if something was added
+                  if (result == true) {
+                    refresh();
+                  }
                 },
               ),
             ),

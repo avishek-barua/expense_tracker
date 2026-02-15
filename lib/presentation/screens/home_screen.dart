@@ -14,12 +14,14 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
+  // Key to force dashboard rebuild when switching to it
+  final GlobalKey<DashboardScreenState> _dashboardKey = GlobalKey();
 
   // Build screen on demand instead of keeping all in memory
   Widget _buildCurrentScreen() {
     switch (_currentIndex) {
       case 0:
-        return const DashboardScreen();
+        return DashboardScreen(key: _dashboardKey);
       case 1:
         return const ExpenseListScreen();
       case 2:
@@ -27,7 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
       case 3:
         return const BorrowLendListScreen();
       default:
-        return const DashboardScreen();
+        return DashboardScreen(key: _dashboardKey);
     }
   }
 
@@ -41,6 +43,12 @@ class _HomeScreenState extends State<HomeScreen> {
           setState(() {
             _currentIndex = index;
           });
+          // Refresh dashboard when switching to it (with delay to ensure it's mounted)
+          if (index == 0) {
+            Future.delayed(const Duration(milliseconds: 100), () {
+              _dashboardKey.currentState?.refresh();
+            });
+          }
         },
         items: const [
           BottomNavigationBarItem(
