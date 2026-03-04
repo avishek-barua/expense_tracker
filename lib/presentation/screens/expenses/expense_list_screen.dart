@@ -19,6 +19,10 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
   DateTime? _startDate;
   DateTime? _endDate;
 
+  // Multi-select state
+  bool _isSelectionMode = false;
+  final Set<String> _selectedIds = {};
+
   @override
   void initState() {
     super.initState();
@@ -28,23 +32,106 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
     });
   }
 
+  void _toggleSelection(String id) {
+    setState(() {
+      if (_selectedIds.contains(id)) {
+        _selectedIds.remove(id);
+        if (_selectedIds.isEmpty) {
+          _isSelectionMode = false;
+        }
+      } else {
+        _selectedIds.add(id);
+      }
+    });
+  }
+
+  void _enterSelectionMode(String id) {
+    setState(() {
+      _isSelectionMode = true;
+      _selectedIds.add(id);
+    });
+  }
+
+  void _exitSelectionMode() {
+    setState(() {
+      _isSelectionMode = false;
+      _selectedIds.clear();
+    });
+  }
+
+  Future<void> _deleteSelected() async {
+    final count = _selectedIds.length;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Expenses'),
+        content: Text('Delete $count expense${count > 1 ? 's' : ''}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        for (final id in _selectedIds) {
+          await ref.read(expenseProvider.notifier).deleteExpense(id);
+        }
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('$count deleted')));
+          _exitSelectionMode();
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final expensesAsync = ref.watch(expenseProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Expenses'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.filter_list),
-            onPressed: _showFilterDialog,
-          ),
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: _showSearchDialog,
-          ),
-        ],
+        title: _isSelectionMode
+            ? Text('${_selectedIds.length} selected')
+            : const Text('Expenses'),
+        leading: _isSelectionMode
+            ? IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: _exitSelectionMode,
+              )
+            : null,
+        actions: _isSelectionMode
+            ? [
+                IconButton(
+                  icon: const Icon(Icons.delete),
+                  onPressed: _deleteSelected,
+                ),
+              ]
+            : [
+                IconButton(
+                  icon: const Icon(Icons.filter_list),
+                  onPressed: _showFilterDialog,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.search),
+                  onPressed: _showSearchDialog,
+                ),
+              ],
       ),
       body: RefreshIndicator(
         onRefresh: () async {
@@ -95,6 +182,27 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
               itemCount: expenses.length,
               itemBuilder: (context, index) {
                 final expense = expenses[index];
+                final isSelected = _selectedIds.contains(expense.id);
+
+                // In selection mode, show checkbox
+                if (_isSelectionMode) {
+                  return Card(
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 4,
+                    ),
+                    child: CheckboxListTile(
+                      value: isSelected,
+                      onChanged: (_) => _toggleSelection(expense.id),
+                      title: Text(expense.description),
+                      subtitle: Text(
+                        '৳${expense.amount.toStringAsFixed(2)} • ${expense.category ?? 'No category'}',
+                      ),
+                    ),
+                  );
+                }
+
+                // Normal mode with swipe-to-delete
                 return Dismissible(
                   key: Key(expense.id),
                   direction: DismissDirection.endToStart,
@@ -139,15 +247,7 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
                           .deleteExpense(expense.id);
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: const Text('Expense deleted'),
-                            action: SnackBarAction(
-                              label: 'Undo',
-                              onPressed: () {
-                                // TODO: Implement undo (would need to cache deleted item)
-                              },
-                            ),
-                          ),
+                          const SnackBar(content: Text('Expense deleted')),
                         );
                       }
                     } catch (e) {
@@ -158,9 +258,12 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
                       }
                     }
                   },
-                  child: ExpenseCard(
-                    expense: expense,
-                    onTap: () => _navigateToEditExpense(expense.id),
+                  child: GestureDetector(
+                    onLongPress: () => _enterSelectionMode(expense.id),
+                    child: ExpenseCard(
+                      expense: expense,
+                      onTap: () => _navigateToEditExpense(expense.id),
+                    ),
                   ),
                 );
               },
@@ -186,11 +289,13 @@ class _ExpenseListScreenState extends ConsumerState<ExpenseListScreen> {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        heroTag: 'expense_fab',
-        onPressed: _navigateToAddExpense,
-        child: const Icon(Icons.add),
-      ),
+      floatingActionButton: _isSelectionMode
+          ? null
+          : FloatingActionButton(
+              heroTag: 'expense_fab',
+              onPressed: _navigateToAddExpense,
+              child: const Icon(Icons.add),
+            ),
     );
   }
 

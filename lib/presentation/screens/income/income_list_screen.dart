@@ -19,6 +19,10 @@ class _IncomeListScreenState extends ConsumerState<IncomeListScreen> {
   DateTime? _startDate;
   DateTime? _endDate;
 
+  // Multi-select state
+  bool _isSelectionMode = false;
+  final Set<String> _selectedIds = {};
+
   @override
   void initState() {
     super.initState();
@@ -28,23 +32,106 @@ class _IncomeListScreenState extends ConsumerState<IncomeListScreen> {
     });
   }
 
+  void _toggleSelection(String id) {
+    setState(() {
+      if (_selectedIds.contains(id)) {
+        _selectedIds.remove(id);
+        if (_selectedIds.isEmpty) {
+          _isSelectionMode = false;
+        }
+      } else {
+        _selectedIds.add(id);
+      }
+    });
+  }
+
+  void _enterSelectionMode(String id) {
+    setState(() {
+      _isSelectionMode = true;
+      _selectedIds.add(id);
+    });
+  }
+
+  void _exitSelectionMode() {
+    setState(() {
+      _isSelectionMode = false;
+      _selectedIds.clear();
+    });
+  }
+
+  Future<void> _deleteSelected() async {
+    final count = _selectedIds.length;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Income'),
+        content: Text('Delete $count income${count > 1 ? 's' : ''}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        for (final id in _selectedIds) {
+          await ref.read(incomeProvider.notifier).deleteIncome(id);
+        }
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('$count deleted')));
+          _exitSelectionMode();
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final incomeAsync = ref.watch(incomeProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Income'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.filter_list),
-            onPressed: _showFilterDialog,
-          ),
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: _showSearchDialog,
-          ),
-        ],
+        title: _isSelectionMode
+            ? Text('${_selectedIds.length} selected')
+            : const Text('Income'),
+        leading: _isSelectionMode
+            ? IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: _exitSelectionMode,
+              )
+            : null,
+        actions: _isSelectionMode
+            ? [
+                IconButton(
+                  icon: const Icon(Icons.delete),
+                  onPressed: _deleteSelected,
+                ),
+              ]
+            : [
+                IconButton(
+                  icon: const Icon(Icons.filter_list),
+                  onPressed: _showFilterDialog,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.search),
+                  onPressed: _showSearchDialog,
+                ),
+              ],
       ),
       body: RefreshIndicator(
         onRefresh: () async {
@@ -95,6 +182,27 @@ class _IncomeListScreenState extends ConsumerState<IncomeListScreen> {
               itemCount: incomeList.length,
               itemBuilder: (context, index) {
                 final income = incomeList[index];
+                final isSelected = _selectedIds.contains(income.id);
+
+                // In selection mode, show checkbox
+                if (_isSelectionMode) {
+                  return Card(
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 4,
+                    ),
+                    child: CheckboxListTile(
+                      value: isSelected,
+                      onChanged: (_) => _toggleSelection(income.id),
+                      title: Text(income.description),
+                      subtitle: Text(
+                        '৳${income.amount.toStringAsFixed(2)} • ${income.category ?? 'No category'}',
+                      ),
+                    ),
+                  );
+                }
+
+                // Normal mode with swipe-to-delete
                 return Dismissible(
                   key: Key(income.id),
                   direction: DismissDirection.endToStart,
@@ -150,9 +258,12 @@ class _IncomeListScreenState extends ConsumerState<IncomeListScreen> {
                       }
                     }
                   },
-                  child: IncomeCard(
-                    income: income,
-                    onTap: () => _navigateToEditIncome(income.id),
+                  child: GestureDetector(
+                    onLongPress: () => _enterSelectionMode(income.id),
+                    child: IncomeCard(
+                      income: income,
+                      onTap: () => _navigateToEditIncome(income.id),
+                    ),
                   ),
                 );
               },
@@ -178,11 +289,13 @@ class _IncomeListScreenState extends ConsumerState<IncomeListScreen> {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        heroTag: 'income_fab',
-        onPressed: _navigateToAddIncome,
-        child: const Icon(Icons.add),
-      ),
+      floatingActionButton: _isSelectionMode
+          ? null
+          : FloatingActionButton(
+              heroTag: 'income_fab',
+              onPressed: _navigateToAddIncome,
+              child: const Icon(Icons.add),
+            ),
     );
   }
 

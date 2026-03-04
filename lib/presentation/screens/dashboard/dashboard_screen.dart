@@ -17,7 +17,13 @@ class DashboardScreen extends ConsumerStatefulWidget {
   ConsumerState<DashboardScreen> createState() => DashboardScreenState();
 }
 
-class DashboardScreenState extends ConsumerState<DashboardScreen> {
+class DashboardScreenState extends ConsumerState<DashboardScreen>
+    with AutomaticKeepAliveClientMixin {
+  DateTime _selectedMonth = DateTime.now();
+
+  @override
+  bool get wantKeepAlive => true;
+
   /// Public refresh method that can be called from parent
   void refresh() {
     if (mounted) {
@@ -31,12 +37,30 @@ class DashboardScreenState extends ConsumerState<DashboardScreen> {
     }
   }
 
+  void _previousMonth() {
+    setState(() {
+      _selectedMonth = DateTime(_selectedMonth.year, _selectedMonth.month - 1);
+    });
+  }
+
+  void _nextMonth() {
+    setState(() {
+      _selectedMonth = DateTime(_selectedMonth.year, _selectedMonth.month + 1);
+    });
+  }
+
+  bool _isCurrentMonth() {
+    final now = DateTime.now();
+    return _selectedMonth.year == now.year && _selectedMonth.month == now.month;
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Get current month date range
-    final now = DateTime.now();
-    final startOfMonth = app_date_utils.DateUtils.startOfMonth(now);
-    final endOfMonth = app_date_utils.DateUtils.endOfMonth(now);
+    super.build(context); // Required for AutomaticKeepAliveClientMixin
+
+    // Get selected month date range
+    final startOfMonth = app_date_utils.DateUtils.startOfMonth(_selectedMonth);
+    final endOfMonth = app_date_utils.DateUtils.endOfMonth(_selectedMonth);
     final monthRange = DateRange(startOfMonth, endOfMonth);
 
     return Scaffold(
@@ -59,7 +83,7 @@ class DashboardScreenState extends ConsumerState<DashboardScreen> {
           padding: const EdgeInsets.all(16),
           children: [
             // Month selector
-            _buildMonthHeader(context, now),
+            _buildMonthHeader(context, _selectedMonth),
             const SizedBox(height: 24),
 
             // Net balance card
@@ -89,6 +113,8 @@ class DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildMonthHeader(BuildContext context, DateTime date) {
+    final isCurrentMonth = _isCurrentMonth();
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -97,24 +123,200 @@ class DashboardScreenState extends ConsumerState<DashboardScreen> {
           children: [
             IconButton(
               icon: const Icon(Icons.chevron_left),
-              onPressed: () {
-                // TODO: Previous month
-              },
+              onPressed: _previousMonth,
             ),
-            Text(
-              '${app_date_utils.DateUtils.formatDateLong(date).split(' ')[0]} ${date.year}',
-              style: Theme.of(context).textTheme.titleLarge,
+            InkWell(
+              onTap: _showMonthPicker,
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '${app_date_utils.DateUtils.formatDateLong(date).split(' ')[0]} ${date.year}',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(width: 8),
+                    const Icon(Icons.arrow_drop_down, size: 24),
+                  ],
+                ),
+              ),
             ),
+            // Hide next month button if current month
             IconButton(
               icon: const Icon(Icons.chevron_right),
-              onPressed: () {
-                // TODO: Next month
-              },
+              onPressed: isCurrentMonth ? null : _nextMonth,
+              color: isCurrentMonth ? Colors.grey[300] : null,
             ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _showMonthPicker() async {
+    final now = DateTime.now();
+    int selectedYear = _selectedMonth.year;
+    int selectedMonth = _selectedMonth.month;
+
+    await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Select Month'),
+              content: SizedBox(
+                width: 300,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Year selector
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.chevron_left),
+                          onPressed: () {
+                            setState(() {
+                              selectedYear--;
+                              // If moving away from current year and month was limited by current month,
+                              // reset to December (no restrictions in past years)
+                              if (selectedYear < now.year &&
+                                  selectedMonth > 12) {
+                                selectedMonth = 12;
+                              }
+                            });
+                          },
+                        ),
+                        Text(
+                          selectedYear.toString(),
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.chevron_right),
+                          onPressed: selectedYear < now.year
+                              ? () {
+                                  setState(() {
+                                    selectedYear++;
+                                    // If moving to current year and selected month is in future, reset to current month
+                                    if (selectedYear == now.year &&
+                                        selectedMonth > now.month) {
+                                      selectedMonth = now.month;
+                                    }
+                                  });
+                                }
+                              : null,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    const Divider(),
+                    const SizedBox(height: 16),
+                    // Month grid
+                    GridView.builder(
+                      shrinkWrap: true,
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 3,
+                            childAspectRatio: 2.5,
+                            crossAxisSpacing: 8,
+                            mainAxisSpacing: 8,
+                          ),
+                      itemCount: 12,
+                      itemBuilder: (context, index) {
+                        final month = index + 1;
+                        final isSelected =
+                            month == selectedMonth; // Remove year check
+                        final isFuture =
+                            selectedYear == now.year && month > now.month;
+                        final monthName = _getMonthName(month);
+
+                        return InkWell(
+                          onTap: isFuture
+                              ? null
+                              : () {
+                                  setState(() => selectedMonth = month);
+                                },
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? Theme.of(context).primaryColor
+                                  : isFuture
+                                  ? Colors.grey[200]
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: isSelected
+                                    ? Theme.of(context).primaryColor
+                                    : Colors.grey[300]!,
+                              ),
+                            ),
+                            child: Center(
+                              child: Text(
+                                monthName,
+                                style: TextStyle(
+                                  color: isSelected
+                                      ? Colors.white
+                                      : isFuture
+                                      ? Colors.grey[400]
+                                      : Colors.black,
+                                  fontWeight: isSelected
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    this.setState(() {
+                      _selectedMonth = DateTime(selectedYear, selectedMonth);
+                    });
+                  },
+                  child: const Text('OK'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  String _getMonthName(int month) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return months[month - 1];
   }
 
   Widget _buildNetBalanceCard(

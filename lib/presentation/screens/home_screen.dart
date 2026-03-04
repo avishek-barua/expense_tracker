@@ -14,41 +14,41 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
-  // Key to force dashboard rebuild when switching to it
-  final GlobalKey<DashboardScreenState> _dashboardKey = GlobalKey();
+  final PageController _pageController = PageController();
 
-  // Build screen on demand instead of keeping all in memory
-  Widget _buildCurrentScreen() {
-    switch (_currentIndex) {
-      case 0:
-        return DashboardScreen(key: _dashboardKey);
-      case 1:
-        return const ExpenseListScreen();
-      case 2:
-        return const IncomeListScreen();
-      case 3:
-        return const BorrowLendListScreen();
-      default:
-        return DashboardScreen(key: _dashboardKey);
-    }
+  // Keep all screens in memory
+  final List<Widget> _screens = const [
+    DashboardScreen(),
+    ExpenseListScreen(),
+    IncomeListScreen(),
+    BorrowLendListScreen(),
+  ];
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _buildCurrentScreen(),
+      body: PageView(
+        controller: _pageController,
+        onPageChanged: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+        children: _screens,
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) {
           setState(() {
             _currentIndex = index;
           });
-          // Refresh dashboard when switching to it (with delay to ensure it's mounted)
-          if (index == 0) {
-            Future.delayed(const Duration(milliseconds: 100), () {
-              _dashboardKey.currentState?.refresh();
-            });
-          }
+          _pageController.jumpToPage(index);
         },
         items: const [
           BottomNavigationBarItem(
