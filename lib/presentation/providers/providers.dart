@@ -6,6 +6,7 @@ import 'package:expense_tracker/domain/repositories/borrow_lend_repository.dart'
 import 'package:expense_tracker/data/repositories/expense_repository_impl.dart';
 import 'package:expense_tracker/data/repositories/income_repository_impl.dart';
 import 'package:expense_tracker/data/repositories/borrow_lend_repository_impl.dart';
+import 'package:expense_tracker/data/repositories/opening_balance_repository_impl.dart';
 
 /// Database instance provider (singleton)
 final localDatabaseProvider = Provider<LocalDatabase>((ref) {
@@ -29,3 +30,9 @@ final borrowLendRepositoryProvider = Provider<BorrowLendRepository>((ref) {
   final database = ref.watch(localDatabaseProvider);
   return BorrowLendRepositoryImpl(database);
 });
+
+/// Opening Balance repository provider
+final openingBalanceRepositoryImplProvider =
+    Provider<OpeningBalanceRepositoryImpl>((ref) {
+      return OpeningBalanceRepositoryImpl(ref.watch(localDatabaseProvider));
+    });

@@ -15,19 +15,40 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
   final PageController _pageController = PageController();
+  final GlobalKey<DashboardScreenState> _dashboardKey = GlobalKey();
+  bool _isRefreshing = false;
 
   // Keep all screens in memory
-  final List<Widget> _screens = const [
-    DashboardScreen(),
-    ExpenseListScreen(),
-    IncomeListScreen(),
-    BorrowLendListScreen(),
-  ];
+  late final List<Widget> _screens;
+
+  @override
+  void initState() {
+    super.initState();
+    _screens = [
+      DashboardScreen(key: _dashboardKey),
+      const ExpenseListScreen(),
+      const IncomeListScreen(),
+      const BorrowLendListScreen(),
+    ];
+  }
 
   @override
   void dispose() {
     _pageController.dispose();
     super.dispose();
+  }
+
+  void _refreshDashboard() {
+    // Debounce: Don't refresh if already refreshing
+    if (_isRefreshing) return;
+
+    _isRefreshing = true;
+    _dashboardKey.currentState?.refresh();
+
+    // Reset flag after a delay
+    Future.delayed(const Duration(milliseconds: 500), () {
+      _isRefreshing = false;
+    });
   }
 
   @override
@@ -39,6 +60,10 @@ class _HomeScreenState extends State<HomeScreen> {
           setState(() {
             _currentIndex = index;
           });
+          // Refresh dashboard when switching to it
+          if (index == 0) {
+            _refreshDashboard();
+          }
         },
         children: _screens,
       ),
@@ -49,6 +74,12 @@ class _HomeScreenState extends State<HomeScreen> {
             _currentIndex = index;
           });
           _pageController.jumpToPage(index);
+          // Refresh dashboard when tapping to switch to it
+          if (index == 0) {
+            Future.delayed(const Duration(milliseconds: 100), () {
+              _refreshDashboard();
+            });
+          }
         },
         items: const [
           BottomNavigationBarItem(

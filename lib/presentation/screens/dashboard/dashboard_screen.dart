@@ -6,6 +6,7 @@ import '../../../core/utils/date_utils.dart' as app_date_utils;
 import '../../../presentation/providers/expense_provider.dart';
 import '../../../presentation/providers/income_provider.dart';
 import '../../../presentation/providers/borrow_lend_provider.dart';
+import '../../../presentation/providers/opening_balance_provider.dart';
 import '../expenses/add_expense_screen.dart';
 import '../income/add_income_screen.dart';
 
@@ -27,13 +28,14 @@ class DashboardScreenState extends ConsumerState<DashboardScreen>
   /// Public refresh method that can be called from parent
   void refresh() {
     if (mounted) {
-      // Invalidate providers - the watchers will automatically rebuild
+      // Invalidate all providers in batch (no setState to avoid immediate rebuild)
+      // The providers will rebuild widgets automatically when data arrives
       ref.invalidate(totalExpensesProvider);
       ref.invalidate(totalIncomeProvider);
       ref.invalidate(totalBorrowedProvider);
       ref.invalidate(totalLentProvider);
-      // Force a rebuild of this widget
-      setState(() {});
+      ref.invalidate(openingBalanceProvider);
+      ref.invalidate(closingBalanceProvider);
     }
   }
 
@@ -84,7 +86,11 @@ class DashboardScreenState extends ConsumerState<DashboardScreen>
           children: [
             // Month selector
             _buildMonthHeader(context, _selectedMonth),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
+
+            // Opening Balance card
+            _buildOpeningBalanceCard(context, ref, _selectedMonth),
+            const SizedBox(height: 16),
 
             // Net balance card
             _buildNetBalanceCard(context, ref, monthRange),
@@ -102,6 +108,10 @@ class DashboardScreenState extends ConsumerState<DashboardScreen>
 
             // Borrow/Lend summary
             _buildBorrowLendCard(context, ref),
+            const SizedBox(height: 16),
+
+            // Current/Closing Balance card
+            _buildClosingBalanceCard(context, ref, _selectedMonth),
             const SizedBox(height: 24),
 
             // Quick actions
@@ -551,6 +561,177 @@ class DashboardScreenState extends ConsumerState<DashboardScreen>
         ),
       ),
     );
+  }
+
+  Widget _buildOpeningBalanceCard(
+    BuildContext context,
+    WidgetRef ref,
+    DateTime month,
+  ) {
+    final openingBalanceAsync = ref.watch(
+      openingBalanceProvider((month.month, month.year)),
+    );
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Opening Balance',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                TextButton.icon(
+                  onPressed: () =>
+                      _showSetOpeningBalanceDialog(context, ref, month),
+                  icon: const Icon(Icons.edit, size: 18),
+                  label: const Text('Set'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            openingBalanceAsync.when(
+              data: (amount) => Text(
+                CurrencyFormatter.format(amount),
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).primaryColor,
+                ),
+              ),
+              loading: () => const CircularProgressIndicator(strokeWidth: 2),
+              error: (_, __) => const Text('Error'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildClosingBalanceCard(
+    BuildContext context,
+    WidgetRef ref,
+    DateTime month,
+  ) {
+    final closingBalanceAsync = ref.watch(
+      closingBalanceProvider((month.month, month.year)),
+    );
+    final isCurrentMonth = _isCurrentMonth();
+
+    return Card(
+      color: Colors.green[50],
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              isCurrentMonth ? 'Current Balance' : 'Closing Balance',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            closingBalanceAsync.when(
+              data: (amount) => Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    CurrencyFormatter.format(amount),
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: amount >= 0 ? Colors.green[700] : Colors.red[700],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    isCurrentMonth
+                        ? 'Money you have now'
+                        : 'Balance at end of month',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+              loading: () => const CircularProgressIndicator(strokeWidth: 2),
+              error: (_, __) => const Text('Error'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showSetOpeningBalanceDialog(
+    BuildContext context,
+    WidgetRef ref,
+    DateTime month,
+  ) async {
+    final currentBalance = await ref.read(
+      openingBalanceProvider((month.month, month.year)).future,
+    );
+    final controller = TextEditingController(
+      text: currentBalance > 0 ? currentBalance.toStringAsFixed(0) : '',
+    );
+
+    final result = await showDialog<double>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          'Set Opening Balance - ${_getMonthName(month.month)} ${month.year}',
+        ),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(
+            labelText: 'Amount',
+            prefixText: '৳ ',
+            border: OutlineInputBorder(),
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final amount = double.tryParse(controller.text);
+              if (amount != null && amount >= 0) {
+                Navigator.pop(context, amount);
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    if (result != null) {
+      try {
+        await ref
+            .read(openingBalanceNotifierProvider.notifier)
+            .setOpeningBalance(month.month, month.year, result);
+        // Refresh providers
+        ref.invalidate(openingBalanceProvider((month.month, month.year)));
+        ref.invalidate(closingBalanceProvider((month.month, month.year)));
+
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Opening balance saved')),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        }
+      }
+    }
   }
 
   Widget _buildQuickActions(BuildContext context) {

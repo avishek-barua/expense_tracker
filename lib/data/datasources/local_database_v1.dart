@@ -2,12 +2,12 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
 /// Local SQLite database manager
-///
+/// 
 /// Handles database creation, versioning, and provides access to the DB instance.
 /// All tables use TEXT for IDs (UUIDs) and dates (ISO 8601 format).
 class LocalDatabase {
   static const String _databaseName = 'expense_tracker.db';
-  static const int _databaseVersion = 2; // Updated version
+  static const int _databaseVersion = 1;
 
   // Singleton pattern - only one database instance
   LocalDatabase._privateConstructor();
@@ -31,7 +31,6 @@ class LocalDatabase {
       path,
       version: _databaseVersion,
       onCreate: _onCreate,
-      onUpgrade: _onUpgrade,
       onConfigure: _onConfigure,
     );
   }
@@ -41,7 +40,7 @@ class LocalDatabase {
     await db.execute('PRAGMA foreign_keys = ON');
   }
 
-  /// Create all tables (for new installations)
+  /// Create all tables
   Future<void> _onCreate(Database db, int version) async {
     // Table 1: Expenses
     await db.execute('''
@@ -102,62 +101,12 @@ class LocalDatabase {
       )
     ''');
 
-    // Table 5: Opening Balances (NEW in version 2)
-    await db.execute('''
-      CREATE TABLE opening_balances (
-        id TEXT PRIMARY KEY,
-        month INTEGER NOT NULL CHECK(month >= 1 AND month <= 12),
-        year INTEGER NOT NULL CHECK(year >= 2000 AND year <= 2100),
-        amount REAL NOT NULL CHECK(amount >= 0),
-        created_at TEXT NOT NULL,
-        UNIQUE(month, year)
-      )
-    ''');
-
     // Indexes for common queries
     await db.execute('CREATE INDEX idx_expenses_date ON expenses(date DESC)');
     await db.execute('CREATE INDEX idx_income_date ON income(date DESC)');
-    await db.execute(
-      'CREATE INDEX idx_borrow_lend_status ON borrow_lend(status)',
-    );
-    await db.execute(
-      'CREATE INDEX idx_borrow_lend_person ON borrow_lend(person_name)',
-    );
-    await db.execute(
-      'CREATE INDEX idx_repayments_borrow_lend ON repayments(borrow_lend_id)',
-    );
-    await db.execute(
-      'CREATE INDEX idx_opening_balances_month_year ON opening_balances(year DESC, month DESC)',
-    );
-  }
-
-  /// Handle database upgrades
-  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    if (oldVersion < 2) {
-      // Upgrade from version 1 to 2: Add opening_balances table
-      // Use IF NOT EXISTS to prevent errors if table already exists
-      await db.execute('''
-        CREATE TABLE IF NOT EXISTS opening_balances (
-          id TEXT PRIMARY KEY,
-          month INTEGER NOT NULL CHECK(month >= 1 AND month <= 12),
-          year INTEGER NOT NULL CHECK(year >= 2000 AND year <= 2100),
-          amount REAL NOT NULL CHECK(amount >= 0),
-          created_at TEXT NOT NULL,
-          UNIQUE(month, year)
-        )
-      ''');
-
-      // Check if index exists before creating
-      final indexExists = await db.rawQuery(
-        "SELECT name FROM sqlite_master WHERE type='index' AND name='idx_opening_balances_month_year'",
-      );
-
-      if (indexExists.isEmpty) {
-        await db.execute(
-          'CREATE INDEX idx_opening_balances_month_year ON opening_balances(year DESC, month DESC)',
-        );
-      }
-    }
+    await db.execute('CREATE INDEX idx_borrow_lend_status ON borrow_lend(status)');
+    await db.execute('CREATE INDEX idx_borrow_lend_person ON borrow_lend(person_name)');
+    await db.execute('CREATE INDEX idx_repayments_borrow_lend ON repayments(borrow_lend_id)');
   }
 
   /// Close database connection
@@ -178,43 +127,28 @@ class LocalDatabase {
   /// Get database statistics (for debugging)
   Future<Map<String, int>> getStats() async {
     final db = await database;
-
-    final expenseCount =
-        Sqflite.firstIntValue(
-          await db.rawQuery('SELECT COUNT(*) FROM expenses'),
-        ) ??
-        0;
-
-    final incomeCount =
-        Sqflite.firstIntValue(
-          await db.rawQuery('SELECT COUNT(*) FROM income'),
-        ) ??
-        0;
-
-    final borrowLendCount =
-        Sqflite.firstIntValue(
-          await db.rawQuery('SELECT COUNT(*) FROM borrow_lend'),
-        ) ??
-        0;
-
-    final repaymentCount =
-        Sqflite.firstIntValue(
-          await db.rawQuery('SELECT COUNT(*) FROM repayments'),
-        ) ??
-        0;
-
-    final openingBalanceCount =
-        Sqflite.firstIntValue(
-          await db.rawQuery('SELECT COUNT(*) FROM opening_balances'),
-        ) ??
-        0;
+    
+    final expenseCount = Sqflite.firstIntValue(
+      await db.rawQuery('SELECT COUNT(*) FROM expenses')
+    ) ?? 0;
+    
+    final incomeCount = Sqflite.firstIntValue(
+      await db.rawQuery('SELECT COUNT(*) FROM income')
+    ) ?? 0;
+    
+    final borrowLendCount = Sqflite.firstIntValue(
+      await db.rawQuery('SELECT COUNT(*) FROM borrow_lend')
+    ) ?? 0;
+    
+    final repaymentCount = Sqflite.firstIntValue(
+      await db.rawQuery('SELECT COUNT(*) FROM repayments')
+    ) ?? 0;
 
     return {
       'expenses': expenseCount,
       'income': incomeCount,
       'borrow_lend': borrowLendCount,
       'repayments': repaymentCount,
-      'opening_balances': openingBalanceCount,
     };
   }
 }
